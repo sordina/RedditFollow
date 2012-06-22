@@ -1,11 +1,19 @@
 User
-    ident Text
-    password Text Maybe
+    ident      Text
+    password   Text Maybe
+    me         Text Maybe
     UniqueUser ident
+
 Email
-    email Text
-    user UserId Maybe
-    verkey Text Maybe
+    email       Text
+    user        UserId Maybe
+    verkey      Text Maybe
     UniqueEmail email
 
- -- By default this file is used in Model.hs (which is imported by Foundation.hs)
+LinkFollow
+    user       UserId
+    redditLink Text
+
+UserFollow
+    user       UserId
+    redditUser Text
