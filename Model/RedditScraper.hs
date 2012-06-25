@@ -1,18 +1,26 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Model.RedditScraper ( pull ) where
+module Model.RedditScraper ( RedditItem(..), pull ) where
 
 import Text.XML.HXT.Core
 import Text.XML.HXT.Curl
 
-pull     :: String -> IO [[String]]
-pull user = runX $ process ("http://www.reddit.com/user/" ++ user ++ "/.rss")
+data RedditItem = RI { title ::  String
+                     , link  ::  String
+                     , exts  :: [String]
+                     }
+                     deriving (Show, Eq, Ord)
+
+pull     :: String -> IO [RedditItem]
+pull user = runX process >>= return . map build
 
   where
 
-    process url = readDocument  [withValidate no, withCurl []] url
-              >>> deep (isElem >>> hasName "item")
-              >>> listA itemInfo
+    url        = "http://www.reddit.com/user/" ++ user ++ "/.rss"
+
+    process    = readDocument  [withValidate no, withCurl []] url
+             >>> deep (isElem >>> hasName "item")
+             >>> listA itemInfo
 
     itemInfo   = catA [elemText "title", elemText "link", external]
 
@@ -21,4 +29,8 @@ pull user = runX $ process ("http://www.reddit.com/user/" ++ user ++ "/.rss")
     external   = elemText "description"
              >>> hread
              >>> deep (isElem >>> hasName "a")
+             >>> filterA (deep getText >>> arr (== "link"))
              >>> getAttrValue "href"
+
+    build (t:l:ex) = RI t l ex
+    build l        = error ("Invalid Reddit Item: " ++ show l)
