@@ -1,29 +1,24 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-import Network.HTTP.Conduit
+module Model.RedditScraper ( pull ) where
+
 import Text.XML.HXT.Core
-import Data.ByteString.Lazy.Char8 (unpack)
-import System.IO
-import Control.Monad (unless)
-import Data.Text hiding (unpack)
+import Text.XML.HXT.Curl
 
--- import Data.Text.Lazy.Encoding (decodeASCII)
+pull     :: String -> IO [[String]]
+pull user = runX $ process ("http://www.reddit.com/user/" ++ user ++ "/.rss")
 
-type Link        = Text
-type RedditLink  = Text
-type Description = Text
+  where
 
-data Item = Item Link RedditLink (Maybe Description) deriving (Show)
+    process url = readDocument  [withValidate no, withCurl []] url
+              >>> deep (isElem >>> hasName "item")
+              >>> listA itemInfo
 
-main = simpleHttp url >>= runX . process . unpack >>= mapM_ print >> hFlush stdout
+    itemInfo   = catA [elemText "title", elemText "link", external]
 
-process str = constA str >>> hread >>> deep memberNames
+    elemText e = deep $ isElem >>> hasName e >>> deep getText
 
-memberNames = isElem >>> hasName "item" >>> (title &&& link &&& desc)
--- deep getText --  >>> hasAttrValue "class" (== "memName") >>> deep getText
-
-title = undefined
-link  = undefined
-desc  = undefined
-
-url = "http://www.reddit.com/user/sordina/.rss"
+    external   = elemText "description"
+             >>> hread
+             >>> deep (isElem >>> hasName "a")
+             >>> getAttrValue "href"
