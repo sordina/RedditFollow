@@ -1,5 +1,3 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
-
 module Model.RedditScraper ( RedditItem(..), pull ) where
 
 import Text.XML.HXT.Core
@@ -12,11 +10,9 @@ data RedditItem = RI { title ::  String
                      deriving (Show, Eq, Ord)
 
 pull     :: String -> IO [RedditItem]
-pull user = runX process >>= return . map build
+pull user = runX process >>= return . map build where
 
-  where
-
-    url        = "http://www.reddit.com/user/" ++ user ++ "/.rss"
+    url        = "http://www.reddit.com/user/" ++ user ++ "/.rss?limit=100"
 
     process    = readDocument  [withValidate no, withCurl []] url
              >>> deep (isElem >>> hasName "item")
